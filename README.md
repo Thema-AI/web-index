@@ -161,3 +161,39 @@ is an increase in the probability of loading a given page, the default behaviour
 is to return pages of a given calibre *or higher*. Consumers should bear this in
 mind and operate on the calibre of the returned page rather than the calibre
 requested, or use `calibre_strict` (which is equally performant).
+
+# Return types
+
+The query interfaces return `Vec<Option<Page>>` in rust and `list[Page | None]`
+in python.
+
+# Examples
+
+!!! TODO
+
+    update when we have actual code
+
+To fetch the latest page for any of a thousand urls, synchronously:
+
+```python
+from web_index.read_only import query
+from web_index.models import SimplePageQuery
+
+urls = ["http://example.com"] * 1_000 # replace with real data
+queries = [SimplePageQuery(url=url) for url in urls]
+results = query(queries)
+print(results)
+```
+
+The same, asynchronously (note that the underlying rust code always runs in an
+asynchronous loop: the api here is just to free up the python event loop to do
+something else):
+```python
+from web_index.read_only import async_query
+from web_index.models import SimplePageQuery
+
+urls = ["http://example.com"] * 1_000 # replace with real data
+queries = [SimplePageQuery(url=url) for url in urls]
+results = await async_query(queries)
+print(results)
+```
