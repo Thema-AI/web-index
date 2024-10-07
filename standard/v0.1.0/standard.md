@@ -80,6 +80,8 @@ The query looks like this:
 - **type**: (String) the type of record (data or metadata), one of "head",
   "head-metadata", "get" or "get-metadata"
 - **url**: (String) the url to which the request was made
+- **timestamp**: (String; ISO8601 datetime) the timestamp at which the attempt
+  *began*
 - **request_id** (String; internal) the opaque id of this request, obtained from
   a previous query (for example, returned after inserting a record). This value
   is strictly opaque and no inferences should be drawn from its construction.
