@@ -1,91 +1,11 @@
 # Thema web index
 
-Thema's web index is a queryable store of the data fetched from the web. It
-stores:
+Thema's web index is a queryable store of the data fetched from the web, and
+metadata about the fetching attempt.
 
-- [X] pages
-- [ ] request attempts (results)
+The formal definition of the interface and storage backend can be found in the
+[latest standard](standard/latest/standard.md).
 
-These are queryable via two interfaces:
-
-- [ ] a read only query interface with no other dependencies
-- [ ] a read/append query interface which depends at present on a running
-  postgres database
-
-These interfaces are available as rust libraries (crates) or as python libraries
-(bindings into the rust). They are optimised for high performance at scale; you
-should feed in as many page queries as possible and let the library work out how to
-optimise, at any rate as a first pass.
-
-## Internal: Response store
-
-!!! Warning
-
-    Internally, the page store is actually a response store. For completeness this
-    store is documented here, but this should be considered an implementation detail
-    and may change at any time. Access except via the interfaces is not supported
-    and may break at any point without notice.
-
-The fundamental unit of work when using the internet is an http request, so this
-is what we persist. Requests are stored one per row in parquet files in s3, with
-the following naming convention:
-
-```
-s3://thema-web-index
-s3://thema-web-index/cache
-s3://thema-web-index/cache/2024/08
-s3://thema-web-index/cache/2024/08/thema.ai.parquet
-s3://thema-web-index/cache/2024/08/thema.ai.1.parquet
-s3://thema-web-index/cache/2024/08/thema.ai.2.parquet
-```
-
-Formally, this is:
-
-```
-s3://{bucket_name}/cache/{year}/{month}/{domain\*}.{(part)}.parquet
-```
-
-where domain is calculated according to the logic in this repo. The part
-suffixes are positive integers starting at 1 and have no meaning except to
-indicate sequential writing. All parts have to be fetched every time a domain is
-accessed. From time to time these files may be defragmented by rolling all part
-files into one (another reason not to work directly on the store). For this to
-happen the store must be locked; currently this lock is enforced via slack :D .
-
-The `cache` subdir exists for futureproofing.
-
-Internally, each parquet file has the schema:
-
-* **page_url**: (String) the url of the page when we started fetching it
-
-* **request_url**: (String) the url of this request, which may differ from the page
-    url (e.g. in case of redirect)
-
-* **status_code**: (u8) the status code of this response
-
-* **data**: (bytes) the body of the response, in bytes
-
-* **headers**: (String, JSON) the headers of the response, parsed to json
-
-* **timestamp**: () The timestamp of this particular response or request
-
-* **retry_attempt**: (u8) The attempt number for this request, starting at 0
-
-* **is_final**: (bool) (internal) whether this is the final response in a chain.
-
-* **request_id**: (String) (internal) a unique id for the linked list of
-    responses starting with the first request and ending with the
-    response whose `is_final` is true. This is an implementation
-    detail used to optimise grouping. Where a query has a
-    `request_id`, there is no need to filter on timestamp or url.
-
-* **fetcher_name**: (String) the human readable name of the fetcher which
-     fetched this page.
-
-* **fetcher_version**: (String) the version of the fetcher, as reported by
-  `--version`.
-
-* **fetcher_calibre**: (u8) the [calibre](#fetcher-calibre) of this fetcher.
 
 ## Page Query
 
