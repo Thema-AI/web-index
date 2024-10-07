@@ -1,0 +1,9 @@
+[package]
+name = "web-index"
+version = "1.0.0"
+edition = "2021"
+
+# MSRV
+rust-version = "1.74.0"
+
+[dependencies]

@@ -1,0 +1,127 @@
+
+name: Build Binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release
+
+jobs:
+  prepare-release:
+    name: "Prepare release and changelog"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      released: ${{ steps.semantic.outputs.new-release-published }}
+      version: ${{ steps.semantic.outputs.release-version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker://ghcr.io/codfish/semantic-release-action@sha256:aeed7c9a41e4f4f8eb0887e14b38d85d2a5a3ad103603db809da36d1f94bfb3b
+        name: "Semantic Release"
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check cargo version matches
+        if: ${{ steps.semantic.outputs.new-release-published == 'true' }}
+        run: |-
+          version=v${{ steps.semantic.outputs.release-version }}
+          cargo_version=$(cargo tree | head -n1 | awk '{print $2}')
+          if [ $cargo_version == $version ]
+          then
+            echo "Cargo version matches; all good"
+          else
+            echo "Please set cargo version to $version (currently $cargo_version) and re-run"
+            echo "Deleting draft release"
+            gh release delete "$version"
+            git push --delete origin "$version"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  release:
+    name: release ${{ matrix.platform.pretty }}
+    needs: prepare-release
+    if: ${{ needs.prepare-release.outputs.released == 'true' }}
+    strategy:
+      fail-fast: false
+
+      matrix:
+        platform:
+          - target: web_index_cross_arm64_static
+            name: web-index-arm64-multiplatform
+            pretty: "Arm64 Multiplatform"
+            os: ubuntu-latest
+
+          - target: web_index_cross_arm64_darwin_static
+            name: web-index-arm64-darwin
+            pretty: "Arm64 MacOS"
+            os: macos-latest
+
+          # - target: web_index_cross_amd64_darwin_static
+          #   name: web-index-amd64-darwin
+          #   pretty: "Amd64 MacOS"
+          #   os: macos-13
+
+          - target: web_index_cross_amd64_linux_static
+            name: web-index-amd64-linux-static
+            pretty: "Amd64 Linux"
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 60
+
+    steps:
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: actions/checkout@v4
+
+      - name: Build binary
+        run: |-
+          nix build .#${{ matrix.platform.target }}
+
+      - name: Package as archive
+        run: |-
+          # the nix output dir is a bit weird and can be bind mounted
+          mkdir dist
+          sudo mv result/bin/* dist/
+          cd dist
+          sudo chown $USER *
+          sudo chmod 755 *
+          tar czvf ../${{ matrix.platform.name }}.tar.gz *
+
+      - name: Publish release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-index-${{matrix.platform.name}}
+          path: "web-index-*.tar.gz"
+
+      - name: Generate SHA-256
+        run: shasum -a 256 ${{ matrix.platform.name }}.tar.gz >> body.txt
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: "web-index-*.tar.gz"
+
+          body_path: body.txt
+          append_body: true
+          tag_name: v${{ needs.prepare-release.outputs.version }}
+          make_latest: true
+
+  publish:
+    timeout-minutes: 5
+    needs: [ "prepare-release", "release" ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |-
+          gh release edit v${{ needs.prepare-release.outputs.version }} \
+            --draft=false --prerelease=false --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+

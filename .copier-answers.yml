@@ -1,0 +1,6 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.7.0
+_src_path: git+ssh://git@github.com/Thema-AI/rust-template.git
+binary: false
+description: Index of accesses to the web
+name: web-index

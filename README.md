@@ -43,3 +43,73 @@ queries = [SimplePageQuery(url=url) for url in urls]
 results = await async_query(queries)
 print(results)
 ```
+
+## Development with nix
+
+### Shell
+To enter a devshell with everything available:
+
+```shell
+nix develop
+```
+
+Unless you have modified the template, this will use the declared nightly
+toolchain. To use another toolchain, specify it explicitly:
+
+```shell
+nix develop .#msrv # uses msrv declared in Cargo.toml
+nix develop .#stable
+nix develop .#nightly # aliased to default
+```
+
+!!! Question "Isn't that commented out?"
+
+    Most shells interpret # as a comment only when preceded by at least one
+    whitespace character or when at the beginning of a line, so you can type the
+    above without quotes.
+
+### Direnv support
+
+Run `direnv allow` to use enter default nix devshell whenever you cd to this repo.
+
+### Normal workflow
+
+Run `nix develop`, or enable direnv. Then use cargo as normal:
+
+```shell
+cargo add foo
+cargo test
+cargo run -- --help
+cargo build --release
+```
+
+As a convenience, the release output dir is added to `$PATH`, so you can run the
+built release artifact directly.
+
+### Installing the nix package
+
+A nix package is defined, so you can use this flake directly in your system
+(providing you can fetch the flake in the first place: note that Thema's code is
+*private* so you can't simply add the repo to your system's `flake.nix`).
+
+### Updating rust/deps
+
+Use `nix flake update`.
+
+### Building cross-platform static binaries
+
+TODO
+
+### Development without nix
+
+This isn't really supported at the moment as nobody uses it, but the following
+should work:
+
+- Install any required system deps (normally you can skip this, and rustc will
+  tell you if you need to do anything)
+- Install the right rust version with e.g. `rustup` (a recent stable or nightly
+  should be fine)
+- Use cargo as normal
+
+If anyone wants to hack on any of this code and finds nix a problem, they should
+[contact John](mailto:john@thema.ai).
