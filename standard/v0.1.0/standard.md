@@ -3,9 +3,10 @@
 
 The web index stores:
 
-- fetched pages
-- head requests (used in matching)
-- metadata about fetches, including failed pages
+- fetched pages, i.e. GET requests
+- HEAD requests (used in matching)
+and:
+- metadata about fetches, including failed attempts
 
 Metadata is a strict superset of other data: there exists a metadata record for
 every data record, and also for failed attempt to generate data records,
@@ -24,7 +25,110 @@ improve performance or add functionality, but should not remove any
 functionality from the api. This guarantee will become a strict promise once
 this specification passes v1.0.0.
 
+## Fetcher Calibre
+
+Every fetcher has a calibre, which is a measure of how likely it is to succeed
+at fetching any given target, and how expensive it will be to do so. (The
+analogy is with artillery, where a higher calibre weapon has more chance of
+destroying a given target, but is obviously more expensive to use.) Thus
+browsers are much slower and resource intensive than httpx, but more likely to
+work, and so on.
+
+Internally calibre is an enum, but for compatibility it is an unsigned integer
+between 0 (unknown) and 100 (reserved). Since in theory an increase in calibre
+is an increase in the probability of fetching a given url, the default behaviour
+when retrieving data with a non-deterministic query is to return data fetched
+with a given calibre *or higher*. Consumers should bear this in mind and operate
+on the calibre of the returned data rather than the calibre requested, or use
+`calibre_strict` (which is equally performant).
+
 ## API
+
+The web index is a queryable append-only store. As such all access to it is
+mediated by queries. Interfaces are currently provided in python and rust, but
+queries are intended to be serialised (proabably to parquet files) and passed
+between stages. To facilitate this, queries are flat data structures with
+defined serialised types. This is the form shown below; the form used in the
+libraries has the same names for members, but uses natural types (for example, a
+timestamp is a `datetime.datetime` object in python). Both libraries support
+deserialising and serialising their native objects into the form described here
+(for example, in order to save a list of queries to the registry).
+
+### Insertion
+
+The simplest query is an insertion request, which looks like this:
+
+- **type**: (String) the type of record being inserted, one of "head" or "get"
+- **url**: (String) the url to which the request was made
+- **timestamp**: (String; ISO8601 datetime) the timestamp at which the attempt *began*
+
+This must be accompanied by a payload of a `metadata` record and an array of
+`data` records as defined below, with the exception that the `request_id` column
+should not be supplied. If the attempt failed the data array should be empty.
+
+The api ingests the data and returns a deterministic retrieval query.
+
+### Retrieval
+
+#### Deterministic query
+
+A deterministic query will always return exactly the same data. Since the web
+index is append-only, this property holds indefinitely.
+
+The query looks like this:
+
+- **type**: (String) the type of record (data or metadata), one of "head",
+  "head-metadata", "get" or "get-metadata"
+- **url**: (String) the url to which the request was made
+- **request_id** (String; internal) the opaque id of this request, obtained from
+  a previous query (for example, returned after inserting a record). This value
+  is strictly opaque and no inferences should be drawn from its construction.
+
+#### Simple query
+
+This matches the latest page for a given url, if any is present. Access is
+expensive and grows linearly with the size of the cache. If a calibre is
+provided only records fetched with that calibre or higher will be returned,
+unless `calibre_strict` is true, an which case only exact matches will be used.
+
+A simple page query looks like this:
+
+- **type**: (String) the type of record (data or metadata), one of "head",
+  "head-metadata", "get" or "get-metadata"
+- **url**: (String) the url to which the request was made
+- **calibre**: (u8) the [calibre](#fetcher-calibre) of the fetcher used
+- **calibre_strict**: (bool) whether to match records fetched with a superior calibre
+
+#### Time bounded query
+
+This matches the nearest fetch to a point in time, with an acceptable window
+outside of which it fails to match. If a calibre is provided only records
+fetched with that calibre or higher will be returned, unless `calibre_strict` is
+true, in which case only exact matches will be used.
+
+A time bounded query looks like this:
+
+- **type**: (String) the type of record (data or metadata), one of "head",
+  "head-metadata", "get" or "get-metadata"
+- **url**: (String) the url to which the request was made
+- **not_before**: (String; ISO8601 datetime) attempts made strictly before this
+  timestamp will not be matched
+- **not_after**: (String; ISO8601 datetime) attempts made strictly after this
+  timestamp will not be matched
+- **calibre**: (u8) the [calibre](#fetcher-calibre) of the fetcher used
+- **calibre_strict**: (bool) whether to match records fetched with a superior
+  calibre. In the libraries this defaults to true.
+
+### Presence
+
+The same queries used for retrieval can be passed to the presence functionality,
+which returns a boolean indicating whether any records match the query. This can
+be assumed to be faster than retrieving the whole record and then casting to bool.
+
+### List/Search
+
+In the future a search like interface may be added to allow discovering what
+data is in fact in the web index.
 
 ## Backend
 
