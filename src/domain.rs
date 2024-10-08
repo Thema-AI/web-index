@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use tldextract_rs::{ExtractResult, Source, SuffixList, TLDExtract};
 use url::Url;
 pub struct Domain {
@@ -34,8 +36,14 @@ impl Domain {
         })
     }
 
-    fn into_string(self) -> String {
+    pub fn into_string(self) -> String {
         self.inner
+    }
+}
+
+impl Display for Domain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        String::fmt(&self.inner, f)
     }
 }
 
