@@ -1,3 +1,4 @@
+mod domain;
 pub fn foobar() -> String {
     "foo".into()
 }
