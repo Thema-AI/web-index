@@ -3,9 +3,8 @@ use std::{collections::HashMap, str::FromStr};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Utc};
 use url::Url;
-use uuid::Uuid;
 
-use crate::domain::Extractor;
+use crate::{domain::Extractor, path::LogicalPath};
 
 pub enum DataType {
     Head,
@@ -112,21 +111,19 @@ impl InsertionQuery {
         )
     }
 
-    /// Compute the full path for this insertion request, using a previously
+    /// Compute the logical path for this insertion request, using a previously
     /// instantised extractor. This method should be used for batch operations,
     /// to avoid repeatedly building extractors.
-    pub fn compute_path(&self, extractor: &mut Extractor) -> Result<String> {
-        let uuid = Uuid::new_v4();
+    pub fn compute_path(self, extractor: &mut Extractor) -> Result<LogicalPath> {
         let dir = self.dir();
         let domain = extractor.domain(&self.url)?;
-
-        Ok(format!("{dir}/{domain}.{uuid}.parquet"))
+        Ok(LogicalPath::new(dir, domain.into(), "parquet".into()))
     }
 
-    /// Compute the full path for this insertion request. This method builds a
+    /// Compute the logical path for this insertion request. This method builds a
     /// new extractor every time; prefer `InsertionQuery::compute_path` with a
     /// seperate extractor for batch operations.
-    pub fn path(&self) -> Result<String> {
+    pub fn path(self) -> Result<LogicalPath> {
         let mut extractor = Extractor::new();
         self.compute_path(&mut extractor)
     }
@@ -284,28 +281,12 @@ mod test_insertion_query {
     }
 
     #[test]
-    fn path_contains_uuid() -> Result<()> {
+    fn path_composed_of_dir_and_suffix() -> Result<()> {
         let query =
             InsertionQuery::get("https://thema.ai".parse()?, "2024-01-01T12:13:14Z".parse()?);
         let path = query.path()?;
-        let parts: Vec<_> = path.split(".").collect();
-        let uuid = parts[parts.len() - 2];
-        println!("{uuid}");
-        Uuid::parse_str(&uuid)?;
 
-        Ok(())
-    }
-
-    #[test]
-    fn path_composed_of_dir_uuid_and_suffix() -> Result<()> {
-        let query =
-            InsertionQuery::get("https://thema.ai".parse()?, "2024-01-01T12:13:14Z".parse()?);
-        let path = query.path()?;
-        let parts: Vec<_> = path.split(".").collect();
-        let uuid = parts[parts.len() - 2];
-        let known_path = path.replace(uuid, "UUID");
-
-        assert_eq!(known_path, "get/2024/01/thema.ai.UUID.parquet");
+        assert_eq!(path.to_string(), "get/2024/01/thema.ai.parquet".to_string());
         Ok(())
     }
 
@@ -324,4 +305,6 @@ mod test_insertion_query {
         );
         Ok(())
     }
+
+    // TODO data-driven tests for the rest, prob with yaml: this is a pain
 }

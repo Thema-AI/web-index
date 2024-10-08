@@ -41,6 +41,12 @@ impl Domain {
     }
 }
 
+impl Into<String> for Domain {
+    fn into(self) -> String {
+        self.into_string()
+    }
+}
+
 impl Display for Domain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         String::fmt(&self.inner, f)

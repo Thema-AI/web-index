@@ -1,6 +1,7 @@
 pub mod data;
 pub mod domain;
 pub mod insert;
+pub mod path;
 pub mod query;
 
 pub fn foobar() -> String {
