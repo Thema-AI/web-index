@@ -141,23 +141,23 @@ thema-web-index/
 ├── head
 │   └── 2024
 │       └── 08
-│           ├── thema.ai.1.parquet
+│           ├── thema.ai.1234-1234-1234-1234.parquet
 │           └── thema.ai.parquet
 ├── head-metadata
 │   └── 2024
 │       └── 08
-│           ├── thema.ai.1.parquet
+│           ├── thema.ai.1234-1234-1234-1234.parquet
 │           └── thema.ai.parquet
 ├── get
 │   └── 2024
 │       └── 08
-│           ├── thema.ai.1.parquet
-│           ├── thema.ai.2.parquet
+│           ├── thema.ai.1234-1234-1234-1234.parquet
+│           ├── thema.ai.2345-2345-2345-2345.parquet
 │           └── thema.ai.parquet
 └── get-metadata
     └── 2024
         └── 08
-            ├── thema.ai.1.parquet
+            ├── thema.ai.1234-1234-1234-1234.parquet
             └── thema.ai.parquet
 ```
 
@@ -171,12 +171,13 @@ The path consists of:
 - the month in which the request was started
 - one or more files in the form `<DOMAIN>.<PART>.parquet`
 
-where domain is calculated as below. The part suffixes are positive integers
-starting at 1 and have no meaning except to indicate sequential writing. All
-parts have to be fetched every time a domain is accessed. From time to time
-these files may be defragmented by rolling all part files into one (another
-reason not to work directly on the store). For this to happen the store must be
-locked; currently this lock is enforced via slack :D .
+where domain is calculated as below. The part suffixes are uuids and have no
+meaning except to prevent collisions when writing. All parts have to be fetched
+every time a domain is accessed. From time to time these files may be
+defragmented by rolling all part files into one (another reason not to work
+directly on the store), creating the files shown above without a part
+component. For this to happen the store must be locked; currently this lock is
+enforced via slack :D .
 
 ### Schema
 
