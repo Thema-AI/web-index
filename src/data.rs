@@ -21,6 +21,11 @@ impl RequestID {
         }
     }
 }
+impl Default for RequestID {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Display for RequestID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
