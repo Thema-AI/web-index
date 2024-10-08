@@ -1,7 +1,7 @@
-mod data;
-mod domain;
-mod insert;
-mod query;
+pub mod data;
+pub mod domain;
+pub mod insert;
+pub mod query;
 
 pub fn foobar() -> String {
     "foo".into()
