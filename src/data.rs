@@ -55,9 +55,17 @@ pub struct HeadData {
     pub fetcher_calibre: u8,
 }
 
+pub struct Metadata {
+    pub state: String,
+    pub url: Url,
+    pub logs: Option<String>,
+    pub traceback: Option<String>,
+    pub run_time: Option<f64>,
+}
+
 pub struct PersistedData<T> {
     data: T,
-    request_id: RequestID,
+    pub(crate) request_id: RequestID,
 }
 
 impl<T> PersistedData<T> {
@@ -65,20 +73,18 @@ impl<T> PersistedData<T> {
         // consider Rc
         let request_id = RequestID::new();
         data.into_iter()
-            .map(|record| Self {
-                data: record,
-                request_id: request_id.clone(),
-            })
+            .map(|record| Self::new_with_id(record, request_id.clone()))
             .collect()
     }
 
     pub fn wrap_with_id(data: Vec<T>, request_id: RequestID) -> Vec<Self> {
         data.into_iter()
-            .map(|record| Self {
-                data: record,
-                request_id: request_id.clone(),
-            })
+            .map(|record| Self::new_with_id(record, request_id.clone()))
             .collect()
+    }
+
+    pub fn new_with_id(data: T, request_id: RequestID) -> Self {
+        Self { data, request_id }
     }
 }
 

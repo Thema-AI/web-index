@@ -1,7 +1,6 @@
 mod data;
 mod domain;
 mod insert;
-mod metadata;
 mod query;
 
 pub fn foobar() -> String {
