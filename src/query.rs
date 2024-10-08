@@ -1,4 +1,6 @@
-use anyhow::Result;
+use std::{collections::HashMap, str::FromStr};
+
+use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Utc};
 use url::Url;
 use uuid::Uuid;
@@ -15,6 +17,7 @@ pub enum MetadataType {
     GetMetadata,
 }
 
+#[derive(PartialEq, Debug)]
 pub enum RecordType {
     Head,
     Get,
@@ -29,6 +32,20 @@ impl RecordType {
             RecordType::Get => "get",
             RecordType::HeadMetadata => "head-metadata",
             RecordType::GetMetadata => "get-metadata",
+        }
+    }
+}
+
+impl FromStr for RecordType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "head" => Ok(RecordType::Head),
+            "get" => Ok(RecordType::Get),
+            "head-metadata" => Ok(RecordType::HeadMetadata),
+            "get-metadata" => Ok(RecordType::GetMetadata),
+            _ => Err(Self::Err::msg("Failed parsing request id")),
         }
     }
 }
@@ -135,22 +152,66 @@ impl InsertionQuery {
     }
 }
 
+#[derive(PartialEq, Debug)]
 pub struct DeterministicQuery {
-    pub r#type: RecordType,
+    pub record_type: RecordType,
     pub url: Url,
     pub timestamp: DateTime<Utc>,
     pub request_id: String,
 }
 
+impl FromStr for DeterministicQuery {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let url = Url::parse(s)?;
+        let params: HashMap<_, _> = url.query_pairs().collect();
+        if url.scheme() == "thema" {
+            Ok(DeterministicQuery {
+                record_type: url.path()[1..].parse()?,
+                url: params.get("url").context("url")?.parse()?,
+                timestamp: params.get("timestamp").context("timestamp")?.parse()?,
+                request_id: params.get("request_id").context("request_id")?.parse()?,
+            })
+        } else {
+            None.context("wrong scheme to parse as deterministic query")
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub struct SimpleQuery {
-    pub r#type: RecordType,
+    pub record_type: RecordType,
     pub url: Url,
     pub calibre: u8,
     pub calibre_strict: bool,
 }
 
+impl FromStr for SimpleQuery {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let url = Url::parse(s)?;
+        let params: HashMap<_, _> = url.query_pairs().collect();
+        if url.scheme() == "thema" {
+            Ok(SimpleQuery {
+                record_type: url.path()[1..].parse()?,
+                url: params.get("url").context("url")?.parse()?,
+                calibre: params.get("calibre").context("calibre")?.parse()?,
+                calibre_strict: params
+                    .get("calibre_strict")
+                    .context("calibre_strict")?
+                    .parse()?,
+            })
+        } else {
+            None.context("wrong scheme to parse as deterministic query")
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub struct TimeBoundedQuery {
-    pub r#type: RecordType,
+    pub record_type: RecordType,
     pub url: Url,
     pub not_before: DateTime<Utc>,
     pub not_after: DateTime<Utc>,
@@ -158,10 +219,51 @@ pub struct TimeBoundedQuery {
     pub calibre_strict: bool,
 }
 
+impl FromStr for TimeBoundedQuery {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let url = Url::parse(s)?;
+        let params: HashMap<_, _> = url.query_pairs().collect();
+        if url.scheme() == "thema" {
+            Ok(Self {
+                record_type: url.path()[1..].parse()?,
+                url: params.get("url").context("url")?.parse()?,
+                not_before: params.get("not_before").context("not_before")?.parse()?,
+                not_after: params.get("not_after").context("not_after")?.parse()?,
+                calibre: params.get("calibre").context("calibre")?.parse()?,
+                calibre_strict: params
+                    .get("calibre_strict")
+                    .context("calibre_strict")?
+                    .parse()?,
+            })
+        } else {
+            None.context("wrong scheme to parse as deterministic query")
+        }
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub enum Query {
     Deterministic(DeterministicQuery),
     Simple(SimpleQuery),
     TimeBounded(TimeBoundedQuery),
+}
+
+impl FromStr for Query {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        if let Ok(query) = s.parse::<DeterministicQuery>() {
+            Ok(Query::Deterministic(query))
+        } else if let Ok(query) = s.parse::<TimeBoundedQuery>() {
+            Ok(Query::TimeBounded(query))
+        } else if let Ok(query) = s.parse::<SimpleQuery>() {
+            Ok(Query::Simple(query))
+        } else {
+            None.context("Unable to parse query")
+        }
+    }
 }
 
 #[cfg(test)]
@@ -169,6 +271,7 @@ mod test_insertion_query {
 
     use super::*;
     use anyhow::Result;
+    use pretty_assertions::assert_eq;
     use rstest::*;
 
     #[rstest]
@@ -203,6 +306,22 @@ mod test_insertion_query {
         let known_path = path.replace(uuid, "UUID");
 
         assert_eq!(known_path, "get/2024/01/thema.ai.UUID.parquet");
+        Ok(())
+    }
+
+    #[test]
+    fn deterministic_query_parsed_from_uri() -> Result<()> {
+        let query: DeterministicQuery = "thema://web-index/get?url=https%3A%2F%2Fthema.ai%2F&timestamp=2024-01-02T12%3A13%3A14Z&request_id=ID".parse()?;
+
+        assert_eq!(
+            query,
+            DeterministicQuery {
+                record_type: RecordType::Get,
+                url: "https://thema.ai/".parse()?,
+                timestamp: "2024-01-02T12:13:14Z".parse()?,
+                request_id: "ID".to_string(),
+            }
+        );
         Ok(())
     }
 }
