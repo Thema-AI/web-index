@@ -186,7 +186,7 @@ We persist response chains. The GET data has the following schema:
 - **request_url**: (String) the url of this request, which may differ from the initial
     url (e.g. in case of redirect)
 - **status_code**: (u8) the status code of this response
-- **data**: (bytes) the body of the response, as raw inary
+- **data**: (bytes) the body of the response, as raw binary
 - **headers**: (String, JSON) the headers of the response, parsed to json
 - **timestamp**: (String, ISO8601 datetime) The timestamp of this particular
   response or request
