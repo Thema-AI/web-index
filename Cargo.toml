@@ -10,6 +10,9 @@ rust-version = "1.74.0"
 anyhow = "1.0.89"
 bytes = { version = "1.7.2", features = ["serde"] }
 chrono = { version = "0.4.38", features = ["serde"] }
+itertools = "0.13.0"
+# polars = { version = "0.43.1", features = ["parquet", "dtype-u8", "dtype-u16"] }
+polars = { version = "0.36.2", features = ["dtype-u8", "dtype-u16", "dtype-struct", "parquet", "nightly"]} # consider manual flags to avoid e.g. polars-sql
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 tldextract-rs = "0.1.1"
