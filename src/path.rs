@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use uuid::Uuid;
 
+#[derive(Hash, PartialEq, Eq)]
 /// The path at which a record would be stored, ignoring deconfliction added to
 /// allow concurrent writing.
 pub struct LogicalPath {
