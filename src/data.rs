@@ -36,7 +36,7 @@ impl Display for RequestID {
     }
 }
 
-trait ToFromDf {
+pub trait ToFromDf {
     fn to_df(data: &[Self]) -> Result<DataFrame, PolarsError>
     where
         Self: Sized;
@@ -306,18 +306,15 @@ impl ToFromDf for Metadata {
         let traceback = df.column("traceback")?.str()?.into_iter();
         let run_time = df.column("run_time")?.f64()?.into_iter();
         izip!(state, urls, logs, traceback, run_time)
-            .map(
-                |(state, url, logs, traceback, run_time)|
-                {
-                    Ok(Self {
-                        state: state.context("state")?.parse()?,
-                        url: url.context("url")?.parse()?,
-                        logs: logs.map(|l| l.to_string()),
-                        traceback: traceback.map(|l| l.to_string()),
-                        run_time,
-                    })
-                },
-            )
+            .map(|(state, url, logs, traceback, run_time)| {
+                Ok(Self {
+                    state: state.context("state")?.parse()?,
+                    url: url.context("url")?.parse()?,
+                    logs: logs.map(|l| l.to_string()),
+                    traceback: traceback.map(|l| l.to_string()),
+                    run_time,
+                })
+            })
             .collect()
     }
 
