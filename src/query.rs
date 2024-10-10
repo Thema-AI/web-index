@@ -115,6 +115,16 @@ impl InsertionQuery {
         )
     }
 
+    /// Turn this query into a deterministic query returning the inserted record.
+    pub fn into_deterministic_query(self, request_id: RequestID) -> DeterministicQuery {
+        DeterministicQuery {
+            record_type: self.record_type,
+            url: self.url,
+            timestamp: self.timestamp,
+            request_id,
+        }
+    }
+
     /// Compute the logical path for this insertion request, using a previously
     /// instantised extractor. This method should be used for batch operations,
     /// to avoid repeatedly building extractors.
@@ -291,6 +301,26 @@ mod test_insertion_query {
         let path = query.to_path()?;
 
         assert_eq!(path.to_string(), "get/2024/01/thema.ai.parquet".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn insertion_query_builds_deterministic_query() -> Result<()> {
+        let request_id = RequestID::new();
+        let expected = DeterministicQuery {
+            record_type: RecordType::Get,
+            url: "https://thema.ai/".parse()?,
+            timestamp: "2024-01-02T12:13:14Z".parse()?,
+            request_id: request_id.clone(),
+        };
+        let query = InsertionQuery::get(
+            "https://thema.ai/".parse()?,
+            "2024-01-02T12:13:14Z".parse()?,
+        );
+
+        let actual = query.into_deterministic_query(request_id);
+
+        assert_eq!(actual, expected);
         Ok(())
     }
 
