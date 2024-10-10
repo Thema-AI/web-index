@@ -11,12 +11,18 @@ use uuid::Uuid;
 
 pub type HeadersJson = Map<String, Value>;
 
+/// The unique ID for this record.
+///
+/// A request ID is calculated at insertion time and then persisted on data and
+/// associated metadata. Knowing the request ID is the difference between a
+/// query and a deterministic query which always returns the same record.
 #[derive(Clone, PartialEq, Debug)]
 pub struct RequestID {
     inner: String,
 }
 
 impl RequestID {
+    /// Generate a new opaque request ID
     pub fn new() -> Self {
         let uuid = Uuid::new_v4();
         Self {
@@ -25,6 +31,7 @@ impl RequestID {
     }
 }
 impl Default for RequestID {
+    /// Generate a new opaque request ID
     fn default() -> Self {
         Self::new()
     }
@@ -36,27 +43,45 @@ impl Display for RequestID {
     }
 }
 
+/// A type convertable to and from rows in a dataframe
 pub trait ToFromDf {
+    /// Convert to a dataframe with one row for every struct
     fn to_df(data: &[Self]) -> Result<DataFrame, PolarsError>
     where
         Self: Sized;
+
+    /// Convert each row of a dataframd into a struct
     fn from_df(df: DataFrame) -> anyhow::Result<Vec<Self>>
     where
         Self: Sized;
 }
 
+/// A response to a GET request.
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetResponse {
+    /// The URL to which the initial request was made
     pub url: Url,
+    /// The URL to which this request was made
     pub request_url: Url,
+    /// The status code of this response
     pub status_code: u16,
+    /// Any data the server returned in the body of this response
     pub data: Option<Bytes>,
+    /// Any headers the server returned, parsed to a JSON map for convenience
     pub headers: Option<HeadersJson>,
+    /// The timestamp of this response
     pub timestamp: DateTime<Utc>,
+    /// The ordinal index of this attempt, starting at 0. If a request had to be
+    /// retried once, this field would read 1.
     pub retry_attempt: u8,
+    /// Whether or not this is the last response in a chain of responses.
     pub is_final: bool,
+    /// The name of the fetcher which fetched this response.
     pub fetcher_name: String,
+    /// The version fo the fetcher which fetched this response, as reporded by `--version`.
     pub fetcher_version: String,
+    /// The numerical value of the calibre of this fetcher; see the standard for
+    /// more information.
     pub fetcher_calibre: u8,
 }
 
@@ -179,17 +204,30 @@ impl ToFromDf for GetResponse {
     }
 }
 
+/// A response to a HEAD request
 #[derive(PartialEq, Debug, Clone)]
 pub struct HeadResponse {
+    /// The URL to which the initial request was made
     pub url: Url,
+    /// The URL to which this request was made
     pub request_url: Url,
+    /// The status code of this response
     pub status_code: u16,
+    /// Any headers the server returned, parsed to a JSON map for convenience
     pub headers: Option<HeadersJson>,
+    /// The timestamp of this response
     pub timestamp: DateTime<Utc>,
+    /// The ordinal index of this attempt, starting at 0. If a request had to be
+    /// retried once, this field would read 1.
     pub retry_attempt: u8,
+    /// Whether or not this is the last response in a chain of responses.
     pub is_final: bool,
+    /// The name of the fetcher which fetched this response.
     pub fetcher_name: String,
+    /// The version fo the fetcher which fetched this response, as reporded by `--version`.
     pub fetcher_version: String,
+    /// The numerical value of the calibre of this fetcher; see the standard for
+    /// more information.
     pub fetcher_calibre: u8,
 }
 
@@ -289,12 +327,21 @@ impl ToFromDf for HeadResponse {
     }
 }
 
+/// Metadata about an attempted fetch.
+/// Metadata allows us to keep track of unsuccessful fetches, as well as to
+/// attach debugging information directly to the data from successful fetches.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Metadata {
+    /// The state in which this attempt finished; this is either "success" or
+    /// one of the failure states defined in the standard.
     pub state: String,
+    /// The url to which this request was made.
     pub url: Url,
+    /// The logs (if any) from this attempt.
     pub logs: Option<String>,
+    /// The traceback (if any) from this attempt.
     pub traceback: Option<String>,
+    /// The time this attempt took, in seconds.
     pub run_time: Option<f64>,
 }
 
@@ -330,6 +377,7 @@ impl ToFromDf for Metadata {
     }
 }
 
+/// Data and the request id which enables uniquely identifying it.
 pub struct PersistedData<T> {
     data: T,
     pub(crate) request_id: RequestID,
