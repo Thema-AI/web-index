@@ -20,3 +20,6 @@ pub mod insert;
 pub mod path;
 /// Queries are used to retrieve and insert data
 pub mod query;
+mod io;
+/// Functions to retrieve data
+pub mod retrieve;
