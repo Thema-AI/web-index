@@ -154,7 +154,7 @@ pub struct DeterministicQuery {
     pub record_type: RecordType,
     pub url: Url,
     pub timestamp: DateTime<Utc>,
-    pub request_id: String,
+    pub request_id: RequestID,
 }
 
 impl FromStr for DeterministicQuery {
@@ -292,7 +292,7 @@ mod test_insertion_query {
 
     #[test]
     fn deterministic_query_parsed_from_uri() -> Result<()> {
-        let query: DeterministicQuery = "thema://web-index/get?url=https%3A%2F%2Fthema.ai%2F&timestamp=2024-01-02T12%3A13%3A14Z&request_id=ID".parse()?;
+        let query: DeterministicQuery = "thema://web-index/get?url=https%3A%2F%2Fthema.ai%2F&timestamp=2024-01-02T12%3A13%3A14Z&request_id=request%3AID".parse()?;
 
         assert_eq!(
             query,
@@ -300,7 +300,7 @@ mod test_insertion_query {
                 record_type: RecordType::Get,
                 url: "https://thema.ai/".parse()?,
                 timestamp: "2024-01-02T12:13:14Z".parse()?,
-                request_id: "ID".to_string(),
+                request_id: "request:ID".parse()?,
             }
         );
         Ok(())
