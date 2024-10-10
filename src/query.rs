@@ -114,7 +114,7 @@ impl InsertionQuery {
     /// Compute the logical path for this insertion request, using a previously
     /// instantised extractor. This method should be used for batch operations,
     /// to avoid repeatedly building extractors.
-    pub fn compute_into_path(self, extractor: &mut Extractor) -> Result<LogicalPath> {
+    pub fn compute_path(&self, extractor: &mut Extractor) -> Result<LogicalPath> {
         let dir = self.dir();
         let domain = extractor.domain(&self.url)?;
         Ok(LogicalPath::new(dir, domain.into(), "parquet".into()))
@@ -123,9 +123,9 @@ impl InsertionQuery {
     /// Compute the logical path for this insertion request. This method builds a
     /// new extractor every time; prefer `InsertionQuery::compute_path` with a
     /// seperate extractor for batch operations.
-    pub fn into_path(self) -> Result<LogicalPath> {
+    pub fn to_path(&self) -> Result<LogicalPath> {
         let mut extractor = Extractor::new();
-        self.compute_into_path(&mut extractor)
+        self.compute_path(&mut extractor)
     }
 
     pub fn new(record_type: RecordType, url: Url, timestamp: DateTime<Utc>) -> Self {
@@ -284,7 +284,7 @@ mod test_insertion_query {
     fn path_composed_of_dir_and_suffix() -> Result<()> {
         let query =
             InsertionQuery::get("https://thema.ai".parse()?, "2024-01-01T12:13:14Z".parse()?);
-        let path = query.into_path()?;
+        let path = query.to_path()?;
 
         assert_eq!(path.to_string(), "get/2024/01/thema.ai.parquet".to_string());
         Ok(())
