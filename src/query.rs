@@ -16,7 +16,7 @@ pub enum MetadataType {
     GetMetadata,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub enum RecordType {
     Head,
     Get,
