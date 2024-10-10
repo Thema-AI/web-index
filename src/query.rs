@@ -25,7 +25,7 @@ pub enum RecordType {
 }
 
 impl RecordType {
-     pub fn dir(&self) -> &str {
+    pub fn dir(&self) -> &str {
         match self {
             RecordType::Head => "head",
             RecordType::Get => "get",
