@@ -1874,6 +1874,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
+ "thiserror",
  "tldextract-rs",
  "url",
  "uuid",
