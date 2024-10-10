@@ -1,7 +1,8 @@
 use anyhow::Context;
 use itertools::izip;
 use polars::prelude::*;
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
+use thiserror::Error;
 
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
@@ -40,6 +41,25 @@ impl Default for RequestID {
 impl Display for RequestID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         String::fmt(&self.inner, f)
+    }
+}
+
+/// Unable to parse request from a string
+#[derive(Error, Debug)]
+#[error("Unable to parse request from string.")]
+pub struct RequestParseError;
+
+/// RequestIDs can be parsed from strings (for instance from dataframes)
+impl FromStr for RequestID {
+    type Err = RequestParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with("request:") && s.len() > 8 {
+            Ok(Self {
+                inner: s.to_string(),
+            })
+        } else {
+            Err(Self::Err {})
+        }
     }
 }
 
