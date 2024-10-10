@@ -4,7 +4,11 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Utc};
 use url::Url;
 
-use crate::{domain::Extractor, path::LogicalPath};
+use crate::{
+    data::RequestID,
+    domain::Extractor,
+    path::{LogicalPath, PhysicalPath},
+};
 
 pub enum DataType {
     Head,
